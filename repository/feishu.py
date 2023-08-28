@@ -19,9 +19,33 @@ tenant_access_token=""
 tenant_access_token_expire = 0
 global_titles = {} #key: sub_id, value: title/name
 global_ticket_title={}
-DEFAULT_TENANT_ACCESS_TOKEN = ""
-DEFAULT_TENANT_ACCESS_TOKEN_EXPIRE=0
 
+def get_tenant_access_token(app_id:str=APP_ID, app_secret:str=APP_SECRET) -> Union[str, int]:
+    url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
+    payload = json.dumps({
+        "app_id": app_id,
+        "app_secret": app_secret,
+    })
+
+
+    headers = {
+    'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    if FEISHU_API_VERBOSE:
+        print(response.text)
+    try:
+        content=dict(json.loads(response.text))
+        # global tenant_access_token,tenant_access_token_expire,tenant_access_token_dict
+        # tenant_access_token=content.get('tenant_access_token')
+        # tenant_access_token_expire = content['expire'] + int(time.time())
+        tenant_access_token_dict[app_id] = (content.get('tenant_access_token'), content['expire'] + int(time.time()))
+        return tenant_access_token_dict[app_id]
+    except ValueError as e:
+        print(e)
+
+(DEFAULT_TENANT_ACCESS_TOKEN,DEFAULT_TENANT_ACCESS_TOKEN_EXPIRE) = get_tenant_access_token()
 # async def process_new_message(input:models.OnNewMessageInput):
 #     print('start processing new msg')
 #     if FEISHU_API_VERBOSE:
@@ -139,7 +163,8 @@ async def renew_chat_session(user_id: str, tenant_access_token:str=DEFAULT_TENAN
             receive_id=user_id,
             msg_type="text",
             content=json.dumps({"text":"好的，我已经忘记了之前的对话，请开始新的对话。"})
-        )
+        ),
+        tenant_access_token=tenant_access_token
     )
 
 def check_feishu_urls(urls: List[str]):
@@ -225,30 +250,7 @@ def find_urls(text: str):
         return []
     return urls
 
-def get_tenant_access_token(app_id:str=APP_ID, app_secret:str=APP_SECRET) -> Union[str, int]:
-    url = "https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal"
-    payload = json.dumps({
-        "app_id": app_id,
-        "app_secret": app_secret,
-    })
 
-
-    headers = {
-    'Content-Type': 'application/json'
-    }
-
-    response = requests.request("POST", url, headers=headers, data=payload)
-    if FEISHU_API_VERBOSE:
-        print(response.text)
-    try:
-        content=dict(json.loads(response.text))
-        # global tenant_access_token,tenant_access_token_expire,tenant_access_token_dict
-        # tenant_access_token=content.get('tenant_access_token')
-        # tenant_access_token_expire = content['expire'] + int(time.time())
-        tenant_access_token_dict[app_id] = (content.get('tenant_access_token'), content['expire'] + int(time.time()))
-        return tenant_access_token_dict[app_id]
-    except ValueError as e:
-        print(e)
 
 
 def renew_tenant_access_token(tenant_access_token_expire: int):
@@ -474,6 +476,6 @@ def download_export_file(file_token, download_path,tenant_access_token: str=DEFA
     
 
     
-(DEFAULT_TENANT_ACCESS_TOKEN,DEFAULT_TENANT_ACCESS_TOKEN_EXPIRE) = get_tenant_access_token()
+
 
 

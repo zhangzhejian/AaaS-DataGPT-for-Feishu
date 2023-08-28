@@ -107,6 +107,7 @@ class GlobalChatSessionFeishuManager(object):
         for item in self.chat_session.keys():
             if item.user_id == user_id:
                 session=self.chat_session.get(item)
+                await session.astop()
                 app_info=session.app_info
                 async with ChatSessionFeishu(session_key=item,app_info=app_info) as session:
                     await self.chat_session.put(key=item,value=session)
